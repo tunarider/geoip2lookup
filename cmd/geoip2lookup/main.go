@@ -13,20 +13,25 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "geoip2lookup"
 	app.Usage = "GeoIP2 lookup command line tool"
-	app.Version = "0.1.0"
+	app.Version = "0.2.0"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "path, p",
-			Value: "/usr/local/var/GeoIP/GeoLite2-City.mmdb",
+			Value: datafile,
 			Usage: "Database file path",
 		},
 	}
 	app.Action = func(ctx *cli.Context) (err error) {
 		path := ctx.String("path")
 		ipstr := ctx.Args().Get(0)
-		db := readDatabase(path)
+
+	        db, err := geoip2.Open(path)
+	        if err != nil {
+	        	log.Fatal(err)
+	        }
 		defer db.Close()
-		record := lookupIpv4(db, ipstr)
+
+		record := lookup(db, ipstr)
 		printInfo(record)
 		return err
 	}
@@ -36,15 +41,7 @@ func main() {
 	}
 }
 
-func readDatabase(path string) *geoip2.Reader {
-	db, err := geoip2.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
-}
-
-func lookupIpv4(db *geoip2.Reader, ipstr string) *geoip2.City {
+func lookup(db *geoip2.Reader, ipstr string) *geoip2.City {
 	ip := net.ParseIP(ipstr)
 	record, err := db.City(ip)
 	if err != nil {
